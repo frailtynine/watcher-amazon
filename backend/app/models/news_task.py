@@ -40,3 +40,9 @@ class NewsTask(Base):
         back_populates="news_task",
         cascade="all, delete-orphan"
     )
+    newspaper: Mapped[list["Newspaper"]] = relationship(  # type: ignore # noqa: F821
+        "Newspaper",
+        back_populates="news_task",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )

@@ -215,9 +215,10 @@ async def validate_rss_feed(url: str, timeout: int = 10) -> dict:
         # Extract feed title
         feed_title = None
         if feed.get("feed"):
+            feed_data = feed.get("feed", {})
             feed_title = (
-                feed.feed.get("title", "").strip() or
-                feed.feed.get("subtitle", "").strip() or
+                feed_data.get("title", "").strip() or
+                feed_data.get("subtitle", "").strip() or
                 None
             )
 

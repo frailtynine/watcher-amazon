@@ -33,6 +33,12 @@ class GeminiClient:
         self.api_key = api_key
         self.client = genai.Client(api_key=api_key)
 
+    async def process_newspaper(
+        self
+    ) -> None:
+        """Placeholder for processing newspaper items."""
+        pass
+
     async def process_news(
         self,
         title: str,

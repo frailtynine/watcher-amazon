@@ -29,12 +29,15 @@ async def test_create_source_success(client: AsyncClient, auth_headers: dict):
         )
     assert response.status_code == 201
     data = response.json()
-    assert data["name"] == "My RSS Feed"
+    assert data["name"] == "Test Feed Title"
     assert data["type"] == "RSS"
     assert "id" in data
 
 
-async def test_create_source_missing_name(client: AsyncClient, auth_headers: dict):
+async def test_create_source_missing_name(
+    client: AsyncClient,
+    auth_headers: dict
+):
     """Test creating source fails without name."""
     response = await client.post(
         "/api/sources/",
@@ -47,7 +50,10 @@ async def test_create_source_missing_name(client: AsyncClient, auth_headers: dic
     assert response.status_code == 422
 
 
-async def test_create_source_empty_name(client: AsyncClient, auth_headers: dict):
+async def test_create_source_empty_name(
+    client: AsyncClient,
+    auth_headers: dict
+):
     """Test creating source fails with empty name."""
     response = await client.post(
         "/api/sources/",
@@ -61,7 +67,10 @@ async def test_create_source_empty_name(client: AsyncClient, auth_headers: dict)
     assert response.status_code == 422
 
 
-async def test_create_source_invalid_type(client: AsyncClient, auth_headers: dict):
+async def test_create_source_invalid_type(
+    client: AsyncClient,
+    auth_headers: dict
+):
     """Test creating source fails with invalid type."""
     response = await client.post(
         "/api/sources/",
@@ -136,7 +145,10 @@ async def test_get_source_not_found(client: AsyncClient, auth_headers: dict):
     assert response.status_code == 404
 
 
-async def test_get_source_unauthorized(client: AsyncClient, test_source: Source):
+async def test_get_source_unauthorized(
+    client: AsyncClient,
+    test_source: Source,
+):
     """Test getting source requires authentication."""
     response = await client.get(f"/api/sources/{test_source.id}")
     assert response.status_code == 401
@@ -176,7 +188,10 @@ async def test_update_source_invalid_name(
     assert response.status_code == 422
 
 
-async def test_update_source_not_found(client: AsyncClient, auth_headers: dict):
+async def test_update_source_not_found(
+    client: AsyncClient,
+    auth_headers: dict,
+):
     """Test updating non-existent source returns 404."""
     response = await client.patch(
         "/api/sources/99999",
@@ -206,7 +221,10 @@ async def test_delete_source(
     assert response.status_code == 404
 
 
-async def test_delete_source_not_found(client: AsyncClient, auth_headers: dict):
+async def test_delete_source_not_found(
+    client: AsyncClient,
+    auth_headers: dict,
+):
     """Test deleting non-existent source returns 404."""
     response = await client.delete("/api/sources/99999", headers=auth_headers)
     assert response.status_code == 404

@@ -8,6 +8,7 @@ from .news_item_news_task import (
     NewsItemNewsTaskCreate,
     NewsItemNewsTaskUpdate
 )
+from .newspaper import NewspaperRead
 
 __all__ = [
     "UserRead", "UserCreate", "UserUpdate",
@@ -16,4 +17,5 @@ __all__ = [
     "SourceNewsTaskRead", "SourceNewsTaskCreate",
     "NewsItemRead", "NewsItemCreate", "NewsItemUpdate",
     "NewsItemNewsTaskRead", "NewsItemNewsTaskCreate", "NewsItemNewsTaskUpdate",
+    "NewspaperRead",
 ]
