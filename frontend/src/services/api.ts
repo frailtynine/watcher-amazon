@@ -9,6 +9,7 @@ import type {
   SourceNewsTaskAssociation,
   NewsItem,
   NewsItemNewsTask,
+  Newspaper,
 } from '../types';
 
 export interface LoginRequest {
@@ -46,7 +47,7 @@ export const api = createApi({
       return headers;
     },
   }),
-  tagTypes: ['User', 'NewsTasks', 'Sources', 'Associations', 'NewsItems'],
+  tagTypes: ['User', 'NewsTasks', 'Sources', 'Associations', 'NewsItems', 'Newspaper'],
   endpoints: (builder) => ({
     register: builder.mutation<User, RegisterRequest>({
       query: (credentials) => ({
@@ -217,6 +218,14 @@ export const api = createApi({
         { type: 'NewsItems', id: newsItemId },
       ],
     }),
+
+    // Newspaper
+    getNewspaper: builder.query<Newspaper, number>({
+      query: (taskId) => `/newspapers/${taskId}`,
+      providesTags: (result, error, taskId) => [
+        { type: 'Newspaper', id: taskId },
+      ],
+    }),
   }),
 });
 
@@ -243,4 +252,5 @@ export const {
   useGetNewsItemsQuery,
   useGetNewsItemQuery,
   useGetNewsItemResultsQuery,
+  useGetNewspaperQuery,
 } = api;

@@ -67,6 +67,22 @@ export interface NewsItem {
   processing_results?: NewsItemNewsTask[];
 }
 
+export interface NewspaperItem {
+  title: string | null;
+  content: string | null;
+  url: string | null;
+  source_id: number;
+  published_at: string;
+}
+
+export interface Newspaper {
+  id: number;
+  news_task_id: number;
+  title: string;
+  body: Record<string, NewspaperItem[]>;
+  updated_at: string;
+}
+
 export interface NewsItemNewsTask {
   news_item_id: number;
   news_task_id: number;
