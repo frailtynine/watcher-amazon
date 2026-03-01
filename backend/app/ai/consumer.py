@@ -13,6 +13,7 @@ from app.models.news_item import NewsItem
 from app.models.news_task import NewsTask
 from app.models.news_item_news_task import NewsItemNewsTask
 from app.models.source_news_task import SourceNewsTask
+from app.delivery.web import NewsPaperProcessor
 from app.models.user import User
 from app.models.utils import utcnow_naive
 from app.core.config import settings
@@ -116,6 +117,16 @@ class AIConsumer:
         errors = sum(
             1 for r in results if isinstance(r, Exception) or r is None
         )
+
+        if processed > 0:
+            try:
+                processor = NewsPaperProcessor(client)
+                await processor.get_newspaper(task)
+            except Exception as e:
+                self.logger.error(
+                    f"Error generating newspaper for task {task.id}: {e}",
+                    exc_info=True
+                )
 
         return {"processed": processed, "errors": errors}
 

@@ -31,7 +31,6 @@ def mock_valid_feed():
         ],
     }
 
-
 @pytest.fixture
 def mock_feed_no_entries():
     """Mock an RSS feed with no entries."""
@@ -105,6 +104,7 @@ async def test_validate_rss_feed_success(mock_valid_feed):
         # Mock feedparser
         with patch("feedparser.parse", return_value=mock_valid_feed):
             result = await validate_rss_feed("https://example.com/feed.xml")
+            print(result)
 
     assert result["valid"] is True
     assert result["url"] == "https://example.com/feed.xml"
