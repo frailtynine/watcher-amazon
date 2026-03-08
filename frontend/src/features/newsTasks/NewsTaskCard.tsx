@@ -3,7 +3,6 @@ import {
   Heading,
   Text,
   HStack,
-  VStack,
   IconButton,
   Menu,
   MenuButton,

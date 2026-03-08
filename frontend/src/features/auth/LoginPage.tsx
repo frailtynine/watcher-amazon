@@ -10,7 +10,6 @@ import {
   Heading,
   Text,
   useToast,
-  FormErrorMessage,
   Link as ChakraLink,
 } from '@chakra-ui/react';
 import { Link, useNavigate } from 'react-router-dom';

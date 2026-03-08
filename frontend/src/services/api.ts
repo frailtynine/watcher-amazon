@@ -87,7 +87,7 @@ export const api = createApi({
     }),
     getNewsTask: builder.query<NewsTask, string>({
       query: (id) => `/news-tasks/${id}`,
-      providesTags: (result, error, id) => [
+      providesTags: (_result, _error, id) => [
         { type: 'NewsTasks', id }
       ],
     }),
@@ -108,7 +108,7 @@ export const api = createApi({
         method: 'PATCH',
         body: data,
       }),
-      invalidatesTags: (result, error, { id }) => [
+      invalidatesTags: (_result, _error, { id }) => [
         { type: 'NewsTasks', id },
         'NewsTasks',
       ],
@@ -132,7 +132,7 @@ export const api = createApi({
     }),
     getSource: builder.query<Source, string>({
       query: (id) => `/sources/${id}`,
-      providesTags: (result, error, id) => [{ type: 'Sources', id }],
+      providesTags: (_result, _error, id) => [{ type: 'Sources', id }],
     }),
     createSource: builder.mutation<Source, SourceCreate>({
       query: (body) => ({
@@ -208,13 +208,13 @@ export const api = createApi({
     }),
     getNewsItem: builder.query<NewsItem, string>({
       query: (id) => `/news-items/${id}`,
-      providesTags: (result, error, id) => [{ type: 'NewsItems', id }],
+      providesTags: (_result, _error, id) => [{ type: 'NewsItems', id }],
     }),
 
     // News Item News Task (processing results)
     getNewsItemResults: builder.query<NewsItemNewsTask[], number>({
       query: (newsItemId) => `/news-items/${newsItemId}/results`,
-      providesTags: (result, error, newsItemId) => [
+      providesTags: (_result, _error, newsItemId) => [
         { type: 'NewsItems', id: newsItemId },
       ],
     }),
@@ -222,7 +222,7 @@ export const api = createApi({
     // Newspaper
     getNewspaper: builder.query<Newspaper, number>({
       query: (taskId) => `/newspapers/${taskId}`,
-      providesTags: (result, error, taskId) => [
+      providesTags: (_result, _error, taskId) => [
         { type: 'Newspaper', id: taskId },
       ],
     }),
@@ -232,7 +232,7 @@ export const api = createApi({
         url: `/newspapers/${taskId}/regenerate`,
         method: 'POST',
       }),
-      invalidatesTags: (result, error, taskId) => [
+      invalidatesTags: (_result, _error, taskId) => [
         { type: 'Newspaper', id: taskId },
       ],
     }),
