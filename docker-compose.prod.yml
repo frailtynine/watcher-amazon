@@ -8,6 +8,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -26,12 +27,13 @@ services:
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-'["http://localhost"]'}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8120
 
   migrate:
     build:
@@ -56,6 +58,7 @@ services:
       - .env
     environment:
       VITE_API_URL: ${VITE_API_URL:-/api}
+    restart: unless-stopped
     depends_on:
       - backend
 
@@ -64,7 +67,8 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
     ports:
-      - "80:80"
+      - "8120:80"
+    restart: unless-stopped
     depends_on:
       - frontend
       - backend
