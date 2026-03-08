@@ -70,10 +70,9 @@ class BaseAIClient(ABC):
             f"You are a news monitoring assistant. "
             f"Your task is to analyze news articles and determine "
             f"if they match the following news filter:\n\n{user_prompt}\n\n"
-            f"Return a JSON object with:\n"
-            f"- 'result': true if the news matches the filter, "
-            f"false otherwise\n"
-            f"- 'thinking': brief explanation of your decision"
+            f"Respond with a raw JSON object only — no markdown, "
+            f"no code fences, no explanations:\n"
+            f'{{"result": <true|false>, "thinking": "<explanation>"}}'
         )
 
     def _build_user_message(self, title: str, content: str) -> str:

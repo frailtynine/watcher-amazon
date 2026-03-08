@@ -7,14 +7,11 @@
 
 1. ENTRY POINT
    ┌──────────────────────────┐
-   │ process_user_news(db, user)│
+   │ process_user_news(user_id)│
    └──────────┬───────────────┘
               │
-              ├─ Check user.settings['gemini_api_key']
-              │  └─ If missing: return {"processed": 0, "errors": 0}
-              │
-              └─ Create GeminiClient(api_key)
-              
+              └─ Create NovaClient(AWS credentials from settings)
+
 2. TASK PROCESSING
    ┌──────────────────────────┐
    │ _get_active_tasks(user_id)│
@@ -49,8 +46,7 @@
 4. AI PROCESSING
    For each news_item:
    ┌─────────────────────────────────────────┐
-   │ gemini_client.process_news(             │
-   │   news_id=item.id,                      │
+   │ nova_client.process_news(               │
    │   title=item.title,                     │
    │   content=item.content,                 │
    │   prompt=task.prompt                    │
@@ -59,9 +55,9 @@
               │
               ├─ Build system instruction from prompt
               ├─ Build user message from title + content
-              └─ Call Gemini API
+              └─ Call Amazon Bedrock converse API
                  │
-                 ├─ Model: gemini-2.0-flash-lite
+                 ├─ Model: amazon.nova-lite-v1:0
                  ├─ Temperature: 0.1
                  ├─ Response format: JSON
                  └─ Schema: {result: boolean, thinking: string}
@@ -70,7 +66,6 @@
               ┌──────────────────────────┐
               │ ProcessingResult         │
               ├──────────────────────────┤
-              │ • news_id: 123           │
               │ • result: True/False     │
               │ • thinking: "..."        │
               │ • tokens_used: 150       │
@@ -107,7 +102,6 @@
 │                       ERROR HANDLING                            │
 └─────────────────────────────────────────────────────────────────┘
 
-• Missing API key → Skip user (log warning)
 • API error → Log error, increment error count, continue
 • DB error → Log error, rollback, increment error count, continue
 • Invalid response → Default to result=False, thinking=""
@@ -119,7 +113,6 @@ Each item processed independently - errors don't cascade!
 └─────────────────────────────────────────────────────────────────┘
 
 User: test@example.com
-Settings: {"gemini_api_key": "AIza..."}
 
 Task: "Find news about AI and machine learning"
 Sources: RSS Feed (TechCrunch), RSS Feed (Wired)
@@ -130,9 +123,9 @@ News Items (< 4 hours old):
   3. "Google's AI breakthrough" [TechCrunch]
 
 Processing:
-  Item 1 + Task → Gemini → result: TRUE ✓
-  Item 2 + Task → Gemini → result: FALSE ✗
-  Item 3 + Task → Gemini → result: TRUE ✓
+  Item 1 + Task → Amazon Nova → result: TRUE ✓
+  Item 2 + Task → Amazon Nova → result: FALSE ✗
+  Item 3 + Task → Amazon Nova → result: TRUE ✓
 
 Database Result:
   news_item_news_task:

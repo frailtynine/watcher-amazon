@@ -1,6 +1,5 @@
 """Amazon Nova client for news processing via AWS Bedrock."""
 import asyncio
-import json
 import logging
 from typing import Optional
 
@@ -71,7 +70,19 @@ class NovaClient(BaseAIClient):
 
         response_text = self._extract_text(response)
         tokens_used = self._extract_tokens(response)
-        return response_text, tokens_used
+        cleaned = self._clean_json(response_text)
+        self.logger.debug("Raw Bedrock response: %r → cleaned: %r", response_text, cleaned)
+        return cleaned, tokens_used
+
+    def _clean_json(self, text: str) -> str:
+        """Strip markdown code fences from model output if present."""
+        text = text.strip()
+        if text.startswith("```"):
+            lines = text.splitlines()
+            # drop opening fence (```json or ```) and closing fence
+            inner = lines[1:-1] if lines[-1].strip() == "```" else lines[1:]
+            text = "\n".join(inner).strip()
+        return text
 
     def _extract_text(self, response: dict) -> str:
         """Extract text content from Bedrock converse response.
@@ -83,6 +94,24 @@ class NovaClient(BaseAIClient):
             Text content from the response
         """
         return response["output"]["message"]["content"][0]["text"]
+
+    async def process_newspaper(self, prompt: str) -> str:
+        """Process newspaper layout and return JSON string.
+
+        Args:
+            prompt: Full newspaper processing prompt with current layout
+
+        Returns:
+            JSON string with newspaper layout updates
+        """
+        text, _ = await self._generate(
+            system_instruction=(
+                "You must respond with valid JSON only. "
+                "No markdown, no explanations, no code fences."
+            ),
+            user_message=prompt,
+        )
+        return text
 
     def _extract_tokens(self, response: dict) -> int:
         """Extract total token count from Bedrock converse response.

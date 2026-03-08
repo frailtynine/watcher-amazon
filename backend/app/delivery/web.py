@@ -14,7 +14,7 @@ from app.schemas.newspaper import (
     NewsItemNewspaper
 )
 from app.models.news_item_news_task import NewsItemNewsTask
-from app.ai.gemini_client import GeminiClient
+from app.ai.nova_client import NovaClient
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ _AI_SUMMARY_MAX = 500
 
 
 class NewsPaperProcessor:
-    """Processor for news items using Gemini."""
+    """Processor for news items using Amazon Nova."""
 
     async def process_newspaper(
         self,
@@ -34,7 +34,11 @@ class NewsPaperProcessor:
         """Placeholder for processing newspaper items."""
         newspaper = await self.get_newspaper(news_task)
         prompt = self._get_promt(newspaper.body, news_item)
-        client = GeminiClient(api_key=settings.BACKEND_GEMINI_API_KEY)
+        client = NovaClient(
+            aws_access_key_id=settings.BACKEND_AWS_ACCESS_KEY,
+            aws_secret_access_key=settings.BACKEND_AWS_SECRET_KEY,
+            region_name=settings.BACKEND_AWS_REGION,
+        )
         response = await client.process_newspaper(prompt)
         new_body = self._recreate_newspaper_body(
             newspaper,
@@ -127,7 +131,11 @@ class NewsPaperProcessor:
             )
             result = await session.execute(news_stmt)
             items = result.scalars().all()
-        client = GeminiClient(api_key=settings.BACKEND_GEMINI_API_KEY)
+        client = NovaClient(
+            aws_access_key_id=settings.BACKEND_AWS_ACCESS_KEY,
+            aws_secret_access_key=settings.BACKEND_AWS_SECRET_KEY,
+            region_name=settings.BACKEND_AWS_REGION,
+        )
         current_body = NewspaperBody(rows=[])
         for item in items:
             mock = SimpleNamespace(body=current_body.model_dump())
@@ -176,11 +184,19 @@ class NewsPaperProcessor:
             "If the new news item is almost the same as an existing one, "
             "keep the one that is more recent and relevant, and drop the other.\n\n"
             "Output instructions:\n"
-            "- `new_item_position`: [row, col] where to place the new item.\n"
-            "- `updates`: list of existing items to keep, with updated positions. "
-            "`row_index` is the 0-based index of the item in the `rows` array "
-            "of the current layout below (NOT the news_item_id). "
-            "Omit items you want to drop.\n\n"
+            "Return a raw JSON object with exactly these fields "
+            "(no markdown, no code fences):\n"
+            "- `new_item_title`: headline for the new item (string)\n"
+            "- `new_item_summary`: 1-3 sentence summary (string)\n"
+            "- `new_item_position`: [row, col] where to place the new item (array of 2 ints)\n"
+            "- `updates`: array of objects, each with exactly TWO fields:\n"
+            "    - `row_index` (int): 0-based index of the item in the `rows` array of the current layout\n"
+            "    - `position` (array of 2 ints): new [row, col] position for that item\n"
+            "  Include only items you want to KEEP. Omit items you want to drop.\n"
+            "  Do NOT include title, summary, news_item_id, or any other fields in updates.\n\n"
+            "Example output format:\n"
+            '{"new_item_title":"...", "new_item_summary":"...", "new_item_position":[0,0], '
+            '"updates":[{"row_index":0,"position":[1,0]},{"row_index":2,"position":[2,0]}]}\n\n'
             f"Current layout (rows is a 0-based array): {newspaper_schema}\n\n"
             "News item to place:\n"
             f"Title: {news_item.title}\n"

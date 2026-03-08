@@ -160,3 +160,21 @@ async def test_converse_called_with_correct_args(nova_client):
     assert "Find tech news" in call_kwargs["system"][0]["text"]
     assert call_kwargs["messages"][0]["role"] == "user"
     assert "Headline" in call_kwargs["messages"][0]["content"][0]["text"]
+
+
+@pytest.mark.asyncio
+async def test_process_newspaper(nova_client):
+    """Test process_newspaper returns raw JSON text from Bedrock."""
+    import json
+    payload = json.dumps({
+        "new_item_title": "Headline",
+        "new_item_summary": "Summary",
+        "new_item_position": [0, 0],
+        "updates": [],
+    })
+    response = make_response(payload)
+    nova_client.client.converse = MagicMock(return_value=response)
+
+    result = await nova_client.process_newspaper("some newspaper prompt")
+
+    assert result == payload

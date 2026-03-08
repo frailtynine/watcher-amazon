@@ -1,20 +1,20 @@
 # AI Consumer Module
 
-This module handles AI-powered news processing using Google Gemini API.
+This module handles AI-powered news processing using Amazon Bedrock (Nova).
 
 ## Overview
 
 The AI consumer processes news items by:
 1. Fetching unprocessed news items (published within the last 4 hours)
-2. Running them through user-defined prompts via Gemini API
+2. Running them through user-defined prompts via Amazon Nova on AWS Bedrock
 3. Storing results (match/no-match) with AI reasoning
 
 ## Components
 
-### `gemini_client.py`
+### `nova_client.py`
 
-Wrapper around Google Gemini API:
-- **Model**: `gemini-2.0-flash-lite`
+Wrapper around Amazon Bedrock's converse API:
+- **Model**: `amazon.nova-lite-v1:0`
 - **Input**: News title, content, and user prompt
 - **Output**: Structured JSON with:
   - `result`: Boolean (matches criteria or not)
@@ -23,9 +23,12 @@ Wrapper around Google Gemini API:
 
 **Example usage:**
 ```python
-client = GeminiClient(api_key="your-key")
+client = NovaClient(
+    aws_access_key_id="key",
+    aws_secret_access_key="secret",
+    region_name="us-east-1",
+)
 result = await client.process_news(
-    news_id=123,
     title="Breaking News",
     content="Full article text...",
     prompt="Find news about technology"
@@ -38,7 +41,7 @@ result = await client.process_news(
 ### `consumer.py`
 
 Main consumer logic:
-- **Per-user processing**: Creates separate Gemini client for each user's API key
+- **Global AWS credentials**: Uses `BACKEND_AWS_*` settings for all users
 - **Active tasks only**: Only processes tasks marked as `active=True`
 - **Time window**: Only processes news published within last 4 hours
 - **Deduplication**: Skips already-processed item-task combinations
@@ -47,7 +50,7 @@ Main consumer logic:
 **Example usage:**
 ```python
 consumer = AIConsumer()
-stats = await consumer.process_user_news(db, user)
+stats = await consumer.process_user_news(user_id)
 # stats -> {"processed": 10, "errors": 1}
 ```
 
@@ -57,7 +60,7 @@ Results stored in `news_item_news_task` table:
 - `news_item_id`, `news_task_id` - Composite primary key
 - `processed` - Boolean flag
 - `result` - True if news matches task prompt
-- `ai_response` - Full JSON response from Gemini:
+- `ai_response` - Full JSON response from Amazon Nova:
   ```json
   {
     "thinking": "This article discusses AI advancements...",
@@ -68,25 +71,24 @@ Results stored in `news_item_news_task` table:
 
 ## Configuration
 
-Users must set their Gemini API key in user settings:
-```json
-{
-  "gemini_api_key": "YOUR_GOOGLE_API_KEY"
-}
+AWS credentials are configured via environment variables:
+```
+BACKEND_AWS_ACCESS_KEY=your-aws-access-key-id
+BACKEND_AWS_SECRET_KEY=your-aws-secret-access-key
+BACKEND_AWS_REGION=us-east-1
 ```
 
 ## Error Handling
 
-- **Missing API key**: Skips processing, logs warning
 - **API errors**: Logged but don't stop processing other items
 - **Invalid responses**: Defaults to `result=False`, empty thinking
 
 ## Testing
 
-Tests use mocked Gemini API responses:
+Tests use mocked AWS Bedrock responses:
 ```bash
 # Run all AI tests
-make test-unit FILE=tests/test_gemini_client.py
+make test-unit FILE=tests/test_nova_client.py
 make test-unit FILE=tests/test_ai_consumer.py
 ```
 
@@ -101,18 +103,17 @@ To integrate into the scheduler:
    ```python
    async def ai_consumer_job():
        async for db in get_async_session():
-           # Get all users
            users = await get_all_users(db)
            consumer = AIConsumer()
            for user in users:
-               await consumer.process_user_news(db, user)
+               await consumer.process_user_news(user.id)
    ```
 3. Schedule it:
    ```python
    scheduler.add_job(
        ai_consumer_job,
        'interval',
-       minutes=10,  # Run every 10 minutes
+       minutes=10,
        id='ai_consumer',
        replace_existing=True
    )

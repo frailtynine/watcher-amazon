@@ -2,14 +2,13 @@
 
 import logging
 from datetime import timedelta
-from typing import Optional
 import asyncio
 
 from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.gemini_client import GeminiClient
+from app.ai.nova_client import NovaClient
 from app.ai.base import ProcessingResult
 from app.models.news_item import NewsItem
 from app.models.news_task import NewsTask
@@ -51,11 +50,7 @@ class AIConsumer:
             if not user:
                 self.logger.warning(f"User with ID {user_id} not found")
                 return {"processed": 0, "errors": 0}
-            api_key = self._get_user_api_key(user)
-            if not api_key:
-                return {"processed": 0, "errors": 0}
-
-            client = GeminiClient(api_key=api_key)
+            client = self._create_ai_client()
             tasks = await self._get_active_tasks(db, user.id)
 
             total_processed = 0
@@ -75,14 +70,14 @@ class AIConsumer:
     async def _process_task_news(
         self,
         db: AsyncSession,
-        client: GeminiClient,
+        client: NovaClient,
         task: NewsTask,
     ) -> dict:
         """Process unprocessed news items for a specific task.
 
         Args:
             db: Database session
-            client: Gemini client
+            client: Amazon Nova client
             task: NewsTask instance
 
         Returns:
@@ -138,7 +133,7 @@ class AIConsumer:
 
     async def _process_task_news_concurrent(
         self,
-        client: GeminiClient,
+        client: NovaClient,
         news_item: NewsItem,
         task: NewsTask,
         db: AsyncSession
@@ -146,7 +141,7 @@ class AIConsumer:
         """Process a single news item concurrently.
 
         Args:
-            client: Gemini client
+            client: Amazon Nova client
             news_item: NewsItem instance
             task: NewsTask instance
         Returns:
@@ -291,18 +286,17 @@ class AIConsumer:
             )
             db.add(record)
 
-    def _get_user_api_key(self, user: User) -> Optional[str]:
-        """Extract Gemini API key from user settings.
-
-        Args:
-            user: User instance
+    def _create_ai_client(self) -> NovaClient:
+        """Create an Amazon Nova AI client using global AWS credentials.
 
         Returns:
-            API key or None if not configured
+            Configured NovaClient instance
         """
-        if not user.settings:
-            return settings.BACKEND_GEMINI_API_KEY
-        return user.settings.get("gemini_api_key")
+        return NovaClient(
+            aws_access_key_id=settings.BACKEND_AWS_ACCESS_KEY,
+            aws_secret_access_key=settings.BACKEND_AWS_SECRET_KEY,
+            region_name=settings.BACKEND_AWS_REGION,
+        )
 
 
 async def run_ai_consumer_job():

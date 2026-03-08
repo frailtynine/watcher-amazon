@@ -1,6 +1,6 @@
 """AI module for news processing."""
 
-from app.ai.gemini_client import GeminiClient
+from app.ai.nova_client import NovaClient
 from app.ai.consumer import AIConsumer
 
-__all__ = ["GeminiClient", "AIConsumer"]
+__all__ = ["NovaClient", "AIConsumer"]

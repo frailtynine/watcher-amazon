@@ -1,53 +1,51 @@
 # AI Consumer Implementation Summary
 
 ## Overview
-Created a complete AI consumer module for processing news items using Google Gemini API.
+Created a complete AI consumer module for processing news items using Amazon Bedrock (Nova).
 
 ## Requirements Met
 
 ### Core Functionality
-✅ **Per-user Gemini clients** - Each user gets their own client initialized with their API key from settings  
+✅ **Global AWS credentials** - Uses `BACKEND_AWS_*` settings for all users  
 ✅ **Active tasks only** - Processes only tasks where `active=True`  
 ✅ **4-hour time window** - News items older than 4 hours are excluded  
-✅ **Prompt matching** - News content + title sent to Gemini with user's prompt  
+✅ **Prompt matching** - News content + title sent to Amazon Nova with user's prompt  
 ✅ **Structured response** - Returns `ProcessingResult` with:
-  - `news_id` (int)
   - `result` (bool) 
   - `thinking` (str)
   - `tokens_used` (int)
 
 ### Model Configuration
-✅ **Model**: `gemini-2.0-flash-lite` (as specified in project dependencies)  
+✅ **Model**: `amazon.nova-lite-v1:0` (Amazon Bedrock)  
 ✅ **Temperature**: 0.1 (consistent results)  
-✅ **Response format**: JSON with schema validation
+✅ **Response format**: JSON
 
 ### Code Quality
 ✅ **No existing code modified** - All new files in isolated `ai/` folder  
-✅ **Not integrated** - Standalone module, ready for future integration  
 ✅ **Minimal try/except** - Only where genuinely needed (API calls, DB operations)  
 ✅ **Clean methods** - Short, focused functions with clear responsibilities  
 ✅ **Well-documented** - Docstrings for all public methods  
 
 ### Testing
 ✅ **Comprehensive test coverage**:
-  - Gemini client tests (9 test cases)
-  - Consumer tests (10 test cases)
+  - Nova client tests
+  - Consumer tests
   - Mocked external dependencies
-  - Edge cases covered (missing API key, errors, etc.)
+  - Edge cases covered (errors, token counting, etc.)
 
 ## File Structure
 
 ```
 backend/app/ai/
 ├── __init__.py              # Module exports
-├── gemini_client.py         # Gemini API wrapper (141 lines)
-├── consumer.py              # Main consumer logic (244 lines)
-├── README.md                # User documentation
-└── integration_example.py   # Scheduler integration guide
+├── nova_client.py           # Amazon Bedrock Nova wrapper
+├── consumer.py              # Main consumer logic
+└── README.md                # User documentation
 
 backend/tests/
-├── test_gemini_client.py    # Client tests (185 lines)
-└── test_ai_consumer.py      # Consumer tests (370 lines)
+├── test_nova_client.py      # Client tests
+└── test_ai_consumer.py      # Consumer tests
+```
 ```
 
 ## Key Design Decisions

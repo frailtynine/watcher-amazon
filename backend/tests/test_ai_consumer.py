@@ -22,20 +22,20 @@ def ai_consumer():
 
 @pytest.fixture
 def mock_user():
-    """Create a mock user with Gemini API key."""
+    """Create a mock user."""
     user = MagicMock(spec=User)
     user.id = 1
     user.email = "test@example.com"
-    user.settings = {"gemini_api_key": "test-api-key"}
+    user.settings = {}
     return user
 
 
 @pytest.fixture
 def mock_user_no_key():
-    """Create a mock user without API key."""
+    """Create a mock user (kept for backward compat with existing tests)."""
     user = MagicMock(spec=User)
     user.id = 2
-    user.email = "nokey@example.com"
+    user.email = "other@example.com"
     user.settings = {}
     return user
 
@@ -55,31 +55,6 @@ async def test_news_item(db_session_maker, test_source):
         await session.commit()
         await session.refresh(news_item)
         return news_item
-
-
-@pytest.mark.anyio
-async def test_get_user_api_key(ai_consumer, mock_user):
-    """Test extracting API key from user settings."""
-    api_key = ai_consumer._get_user_api_key(mock_user)
-    assert api_key == "test-api-key"
-
-
-@pytest.mark.anyio
-async def test_get_user_api_key_missing(ai_consumer, mock_user_no_key):
-    """Test handling missing API key - should fallback to system key."""
-    api_key = ai_consumer._get_user_api_key(mock_user_no_key)
-    # Should return system-wide API key as fallback
-    assert api_key is not None
-
-
-@pytest.mark.anyio
-async def test_get_user_api_key_no_settings(ai_consumer):
-    """Test handling user with no settings - should fallback to system key."""
-    user = MagicMock(spec=User)
-    user.settings = None
-    api_key = ai_consumer._get_user_api_key(user)
-    # Should return system-wide API key as fallback
-    assert api_key is not None
 
 
 @pytest.mark.anyio
@@ -336,21 +311,6 @@ async def test_save_result_updates_existing_record(
 
 
 @pytest.mark.anyio
-async def test_process_user_news_no_api_key(
-    ai_consumer,
-    db_session_maker,
-    mock_user_no_key
-):
-    """Test processing handles missing API key."""
-    result = await ai_consumer.process_user_news(
-        mock_user_no_key.id
-    )
-
-    assert result["processed"] == 0
-    assert result["errors"] == 0
-
-
-@pytest.mark.anyio
 async def test_process_task_news_with_error(
     ai_consumer,
     db_session_maker,
@@ -375,7 +335,7 @@ async def test_process_task_news_with_error(
         session.add(news_item)
         await session.commit()
 
-    # Mock Gemini client that raises error
+    # Mock Nova client that raises error
     mock_client = MagicMock()
     mock_client.process_news = AsyncMock(
         side_effect=Exception("API Error")
@@ -419,7 +379,7 @@ async def test_process_task_news_success(
         session.add(news_item)
         await session.commit()
 
-    # Mock Gemini client
+    # Mock Nova client
     mock_client = MagicMock()
     mock_client.process_news = AsyncMock(
         return_value=ProcessingResult(
