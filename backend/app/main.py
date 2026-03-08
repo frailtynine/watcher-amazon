@@ -78,7 +78,6 @@ def get_app() -> FastAPI:
         description="NewsWatcher Backend API with Authentication",
         version="0.1.0",
         lifespan=lifespan,
-        redirect_slashes=False,
     )
 
     application.add_middleware(
