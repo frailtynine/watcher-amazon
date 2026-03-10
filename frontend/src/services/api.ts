@@ -220,6 +220,11 @@ export const api = createApi({
     }),
 
     // Newspaper
+    getPublicFrontpageNewspaper: builder.query<Newspaper, void>({
+      query: () => '/newspapers/frontpage',
+      providesTags: ['Newspaper'],
+    }),
+
     getNewspaper: builder.query<Newspaper, number>({
       query: (taskId) => `/newspapers/${taskId}`,
       providesTags: (_result, _error, taskId) => [
@@ -262,6 +267,7 @@ export const {
   useGetNewsItemsQuery,
   useGetNewsItemQuery,
   useGetNewsItemResultsQuery,
+  useGetPublicFrontpageNewspaperQuery,
   useGetNewspaperQuery,
   useRegenerateNewspaperMutation,
 } = api;
