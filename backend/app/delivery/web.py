@@ -124,7 +124,7 @@ class NewsPaperProcessor:
         """Check if a news item is relevant for the specific task."""
         async for session in get_async_session():
             stmt = (
-                select(NewsItemNewsTask.id)
+                select(NewsItemNewsTask.news_item_id)
                 .where(
                     NewsItemNewsTask.news_item_id == news_item.id,
                     NewsItemNewsTask.news_task_id == news_task.id,
