@@ -1,11 +1,16 @@
 """Amazon Nova client for news processing via AWS Bedrock."""
 import asyncio
+import json
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 import boto3
+from botocore.config import Config
+from botocore.exceptions import ClientError
+from pydantic import ValidationError
 
 from app.ai.base import BaseAIClient
+from app.schemas.newspaper import NewsItemNewspaperAIResponse
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +18,45 @@ logger = logging.getLogger(__name__)
 class NovaClient(BaseAIClient):
     """Client for interacting with Amazon Nova via AWS Bedrock."""
 
-    MODEL_ID = "amazon.nova-lite-v1:0"
+    MODEL_ID = "global.amazon.nova-2-lite-v1:0"
+    NEWSPAPER_TOOL_NAME = "update_newspaper_layout"
+    NEWSPAPER_TOOL_SCHEMA = {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "new_item_title",
+            "new_item_summary",
+            "new_item_position",
+            "updates",
+        ],
+        "properties": {
+            "new_item_title": {"type": "string"},
+            "new_item_summary": {"type": "string"},
+            "new_item_position": {
+                "type": "array",
+                "items": {"type": "integer"},
+                "minItems": 2,
+                "maxItems": 2,
+            },
+            "updates": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["row_index", "position"],
+                    "properties": {
+                        "row_index": {"type": "integer"},
+                        "position": {
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "minItems": 2,
+                            "maxItems": 2,
+                        },
+                    },
+                },
+            },
+        },
+    }
 
     def __init__(
         self,
@@ -36,6 +79,7 @@ class NovaClient(BaseAIClient):
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
             region_name=region_name,
+            config=Config(max_pool_connections=50),
         )
 
     async def _generate(
@@ -63,7 +107,7 @@ class NovaClient(BaseAIClient):
                 }
             ],
             inferenceConfig={
-                "maxTokens": 1024,
+                "maxTokens": 1500,
                 "temperature": 0.1,
             },
         )
@@ -95,23 +139,37 @@ class NovaClient(BaseAIClient):
         """
         return response["output"]["message"]["content"][0]["text"]
 
-    async def process_newspaper(self, prompt: str) -> str:
-        """Process newspaper layout and return JSON string.
+    async def process_newspaper(
+        self,
+        prompt: str,
+    ) -> NewsItemNewspaperAIResponse:
+        """Process newspaper layout using tool-based structured output.
 
         Args:
             prompt: Full newspaper processing prompt with current layout
 
         Returns:
-            JSON string with newspaper layout updates
+            Parsed newspaper layout updates
         """
-        text, _ = await self._generate(
-            system_instruction=(
-                "You must respond with valid JSON only. "
-                "No markdown, no explanations, no code fences."
-            ),
-            user_message=prompt,
-        )
-        return text
+        response = await self._converse_newspaper(prompt)
+        try:
+            return self._parse_newspaper_response(response)
+        except (ValidationError, ClientError) as first_error:
+            self.logger.warning(
+                "Invalid newspaper tool response, retrying once: %s",
+                first_error,
+            )
+            retry_prompt = (
+                f"{prompt}\n\n"
+                "IMPORTANT: Use tool output only and include ALL required fields:\n"
+                "- new_item_title\n"
+                "- new_item_summary\n"
+                "- new_item_position [row,col]\n"
+                "- updates (array)\n"
+                "Never omit required fields."
+            )
+            retry_response = await self._converse_newspaper(retry_prompt)
+            return self._parse_newspaper_response(retry_response)
 
     def _extract_tokens(self, response: dict) -> int:
         """Extract total token count from Bedrock converse response.
@@ -126,3 +184,83 @@ class NovaClient(BaseAIClient):
         if not usage:
             return 0
         return usage.get("inputTokens", 0) + usage.get("outputTokens", 0)
+
+    def _extract_tool_input(self, response: dict) -> dict[str, Any] | None:
+        """Extract tool input payload from Bedrock converse response."""
+        content = response.get("output", {}).get("message", {}).get("content", [])
+        for block in content:
+            tool_use = block.get("toolUse")
+            if not tool_use:
+                continue
+            if tool_use.get("name") != self.NEWSPAPER_TOOL_NAME:
+                continue
+
+            payload = tool_use.get("input")
+            if isinstance(payload, dict):
+                return payload
+            if isinstance(payload, str):
+                try:
+                    return json.loads(payload)
+                except json.JSONDecodeError:
+                    self.logger.error(
+                        "Invalid JSON in tool payload: %r",
+                        payload,
+                    )
+                    raise
+        return None
+
+    async def _converse_newspaper(self, prompt: str) -> dict[str, Any]:
+        """Call Bedrock with tool-based schema for newspaper updates."""
+        return await asyncio.to_thread(
+            self.client.converse,
+            modelId=self.model_name,
+            system=[
+                {
+                    "text": (
+                        "You are a news editor assistant. "
+                        "Always call the provided tool and fill all required "
+                        "fields in its input schema. Never answer with plain text."
+                    )
+                }
+            ],
+            messages=[
+                {
+                    "role": "user",
+                    "content": [{"text": prompt}],
+                }
+            ],
+            inferenceConfig={
+                "maxTokens": 1500,
+                "temperature": 0.1,
+            },
+            toolConfig={
+                "tools": [
+                    {
+                        "toolSpec": {
+                            "name": self.NEWSPAPER_TOOL_NAME,
+                            "description": (
+                                "Return structured updates for newspaper layout"
+                            ),
+                            "inputSchema": {
+                                "json": self.NEWSPAPER_TOOL_SCHEMA
+                            },
+                        }
+                    }
+                ],
+                "toolChoice": {
+                    "tool": {"name": self.NEWSPAPER_TOOL_NAME}
+                },
+            },
+        )
+
+    def _parse_newspaper_response(
+        self,
+        response: dict[str, Any],
+    ) -> NewsItemNewspaperAIResponse:
+        """Parse and validate newspaper response from tool output only."""
+        tool_input = self._extract_tool_input(response)
+        if tool_input is None:
+            raise ValueError(
+                "No toolUse payload returned by model for structured output."
+            )
+        return NewsItemNewspaperAIResponse.model_validate(tool_input)

@@ -43,7 +43,7 @@ class BaseAIClient(ABC):
         response_text, tokens_used = await self._generate(
             system_instruction, user_message
         )
-        result_data = json.loads(response_text)
+        result_data = self._parse_json_object(response_text)
         return ProcessingResult(
             result=result_data.get("result", False),
             thinking=result_data.get("thinking", ""),
@@ -77,3 +77,18 @@ class BaseAIClient(ABC):
 
     def _build_user_message(self, title: str, content: str) -> str:
         return f"Title: {title}\n\nContent: {content}"
+
+    def _parse_json_object(self, response_text: str) -> dict:
+        """Parse first JSON object from model output safely."""
+        decoder = json.JSONDecoder()
+        start = response_text.find("{")
+        if start < 0:
+            raise json.JSONDecodeError("No JSON object found", response_text, 0)
+        parsed, _ = decoder.raw_decode(response_text[start:])
+        if not isinstance(parsed, dict):
+            raise json.JSONDecodeError(
+                "Expected JSON object at top level",
+                response_text,
+                start,
+            )
+        return parsed

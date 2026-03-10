@@ -14,7 +14,7 @@ The AI consumer processes news items by:
 ### `nova_client.py`
 
 Wrapper around Amazon Bedrock's converse API:
-- **Model**: `amazon.nova-lite-v1:0`
+- **Inference profile / model**: `global.amazon.nova-2-lite-v1:0` (recommended)
 - **Input**: News title, content, and user prompt
 - **Output**: Structured JSON with:
   - `result`: Boolean (matches criteria or not)
@@ -76,6 +76,7 @@ AWS credentials are configured via environment variables:
 BACKEND_AWS_ACCESS_KEY=your-aws-access-key-id
 BACKEND_AWS_SECRET_KEY=your-aws-secret-access-key
 BACKEND_AWS_REGION=us-east-1
+BACKEND_AWS_BEDROCK_MODEL_ID=global.amazon.nova-2-lite-v1:0
 ```
 
 ## Error Handling
