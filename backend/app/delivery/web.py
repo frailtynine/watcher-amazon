@@ -31,6 +31,11 @@ class NewsPaperProcessor:
         news_task: NewsTask,
     ) -> None:
         """Placeholder for processing newspaper items."""
+        if not await self._check_news_for_relevance(
+            news_item,
+            news_task
+        ):
+            return
         newspaper = await self.get_newspaper(news_task)
         prompt = self._get_promt(newspaper.body, news_item)
         client = NovaClient(
@@ -110,6 +115,28 @@ class NewsPaperProcessor:
             await session.commit()
             await session.refresh(current_newspaper)
         return current_newspaper
+
+    async def _check_news_for_relevance(
+        self,
+        news_item: NewsItem,
+        news_task: NewsTask,
+    ) -> bool:
+        """Check if a news item is relevant for the specific task."""
+        async for session in get_async_session():
+            stmt = (
+                select(NewsItemNewsTask.id)
+                .where(
+                    NewsItemNewsTask.news_item_id == news_item.id,
+                    NewsItemNewsTask.news_task_id == news_task.id,
+                    NewsItemNewsTask.result.is_(True),
+                    NewsItemNewsTask.processed.is_(True),
+                )
+                .limit(1)
+            )
+            result = await session.execute(stmt)
+            return result.scalar_one_or_none() is not None
+
+        return False
 
     async def _build_body_from_items(
         self,
