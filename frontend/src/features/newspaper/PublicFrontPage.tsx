@@ -18,8 +18,7 @@ import {
 import { ExternalLinkIcon } from '@chakra-ui/icons';
 import {
   useGetCurrentUserQuery,
-  useGetNewsTasksQuery,
-  useGetNewspaperQuery,
+  useGetPublicFrontpageNewspaperQuery,
   useLogoutMutation,
 } from '../../services/api';
 import type { NewspaperItem } from '../../types';
@@ -142,13 +141,7 @@ export const PublicFrontPage = () => {
 
   const { data: user } = useGetCurrentUserQuery(undefined, { skip: !hasToken });
   const [logout] = useLogoutMutation();
-  const { data: tasks, isLoading: isLoadingTasks } = useGetNewsTasksQuery();
-
-  const firstActiveTask = tasks?.find((task) => task.active);
-  const activeTaskId = firstActiveTask ? Number(firstActiveTask.id) : undefined;
-  const { data: newspaper, isLoading: isLoadingNewspaper } = useGetNewspaperQuery(activeTaskId ?? 0, {
-    skip: !activeTaskId,
-  });
+  const { data: newspaper, isLoading: isLoadingNewspaper } = useGetPublicFrontpageNewspaperQuery();
 
   const handleLogout = async () => {
     try {
@@ -172,7 +165,7 @@ export const PublicFrontPage = () => {
     .sort(([a], [b]) => a - b)
     .map(([, items]) => items.sort((a, b) => a.position[1] - b.position[1]));
 
-  const isLoading = isLoadingTasks || (activeTaskId ? isLoadingNewspaper : false);
+  const isLoading = isLoadingNewspaper;
 
   return (
     <Box bg="gray.50" minH="100vh" px={{ base: 2, md: 4 }} py={{ base: 4, md: 6 }}>

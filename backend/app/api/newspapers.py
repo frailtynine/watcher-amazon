@@ -12,6 +12,26 @@ from app.api.auth import current_active_user
 router = APIRouter()
 
 
+@router.get("/frontpage", response_model=NewspaperRead)
+async def get_frontpage_newspaper(
+    db: AsyncSession = Depends(get_async_session),
+):
+    """Get the first active newspaper for the public frontpage."""
+    result = await db.execute(
+        select(Newspaper)
+        .join(NewsTask, Newspaper.news_task_id == NewsTask.id)
+        .where(NewsTask.active.is_(True))
+        .order_by(NewsTask.id.asc())
+        .limit(1)
+    )
+    newspaper = result.scalar_one_or_none()
+    if newspaper is None:
+        raise HTTPException(
+            status_code=404, detail="Frontpage newspaper not found"
+        )
+    return newspaper
+
+
 @router.get("/{news_task_id}", response_model=NewspaperRead)
 async def get_newspaper(
     news_task_id: int,
@@ -23,7 +43,9 @@ async def get_newspaper(
     )
     newspaper = result.scalar_one_or_none()
     if newspaper is None:
-        raise HTTPException(status_code=404, detail="Newspaper not found")
+        raise HTTPException(
+            status_code=404, detail="Newspaper not found"
+        )
     return newspaper
 
 
@@ -37,7 +59,9 @@ async def regenerate_newspaper(
     from app.delivery.web import NewsPaperProcessor
     news_task = await db.get(NewsTask, news_task_id)
     if news_task is None:
-        raise HTTPException(status_code=404, detail="News task not found")
+        raise HTTPException(
+            status_code=404, detail="News task not found"
+        )
 
     existing = await db.execute(
         select(Newspaper).where(Newspaper.news_task_id == news_task_id)
