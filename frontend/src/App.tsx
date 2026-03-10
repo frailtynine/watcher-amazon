@@ -7,11 +7,11 @@ import {
 } from 'react-router-dom';
 import { store } from './store';
 import { LoginPage } from './features/auth/LoginPage';
-import { SignupPage } from './features/auth/SignupPage';
 import { DashboardLayout } from './components/Layout/DashboardLayout';
 import { NewsTasks } from './features/newsTasks/NewsTasks';
 import NewsItemsPage from './features/newsItems/NewsItemsPage';
 import { NewspaperPage } from './features/newspaper/NewspaperPage';
+import { PublicFrontPage } from './features/newspaper/PublicFrontPage';
 import { PrivateRoute } from './components/PrivateRoute';
 
 function App() {
@@ -20,8 +20,9 @@ function App() {
       <ChakraProvider>
         <BrowserRouter>
           <Routes>
+            <Route path="/" element={<PublicFrontPage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
+            {/* <Route path="/signup" element={<SignupPage />} /> */}
             <Route
               path="/"
               element={
