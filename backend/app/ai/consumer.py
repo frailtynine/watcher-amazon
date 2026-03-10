@@ -115,19 +115,19 @@ class AIConsumer:
             1 for r in results if isinstance(r, Exception) or r is None
         )
 
-        # if processed > 0:
-        try:
-            processor = NewsPaperProcessor()
-            for news_item in news_items:
-                await processor.process_newspaper(
-                    news_task=task,
-                    news_item=news_item
+        if processed > 0:
+            try:
+                processor = NewsPaperProcessor()
+                for news_item in news_items:
+                    await processor.process_newspaper(
+                        news_task=task,
+                        news_item=news_item
+                    )
+            except Exception as e:
+                self.logger.error(
+                    f"Error generating newspaper for task {task.id}: {e}",
+                    exc_info=True
                 )
-        except Exception as e:
-            self.logger.error(
-                f"Error generating newspaper for task {task.id}: {e}",
-                exc_info=True
-            )
 
         return {"processed": processed, "errors": errors}
 
