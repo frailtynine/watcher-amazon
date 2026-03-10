@@ -10,9 +10,8 @@ import {
   Heading,
   Text,
   useToast,
-  Link as ChakraLink,
 } from '@chakra-ui/react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useLoginMutation } from '@/services/api';
 
 export const LoginPage = () => {
@@ -93,12 +92,14 @@ export const LoginPage = () => {
                 Sign In
               </Button>
 
+              {/* Signup is temporarily disabled.
               <Text textAlign="center" fontSize="sm">
                 Don't have an account?{' '}
                 <ChakraLink as={Link} to="/signup" color="blue.500">
                   Sign Up
                 </ChakraLink>
               </Text>
+              */}
             </VStack>
           </form>
         </VStack>
