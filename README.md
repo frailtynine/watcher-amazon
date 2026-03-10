@@ -83,6 +83,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES=1440
 BACKEND_AWS_ACCESS_KEY=your-aws-access-key-id
 BACKEND_AWS_SECRET_KEY=your-aws-secret-access-key
 BACKEND_AWS_REGION=us-east-1
+BACKEND_AWS_BEDROCK_MODEL_ID=global.amazon.nova-2-lite-v1:0
 
 # Telegram (optional — only needed if you want Telegram channel sources)
 BACKEND_TG_API_ID=your-telegram-api-id

@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from app.ai.nova_client import NovaClient
 from app.ai.base import ProcessingResult
+from app.schemas.newspaper import NewsItemNewspaperAIResponse
 
 
 def make_response(text: str, input_tokens: int = 100, output_tokens: int = 50):
@@ -17,6 +18,26 @@ def make_response(text: str, input_tokens: int = 100, output_tokens: int = 50):
         "usage": {
             "inputTokens": input_tokens,
             "outputTokens": output_tokens,
+        },
+    }
+
+
+def make_tool_response(payload: dict):
+    """Build a mock Bedrock converse response with toolUse payload."""
+    return {
+        "output": {
+            "message": {
+                "content": [{
+                    "toolUse": {
+                        "name": NovaClient.NEWSPAPER_TOOL_NAME,
+                        "input": payload,
+                    }
+                }]
+            }
+        },
+        "usage": {
+            "inputTokens": 100,
+            "outputTokens": 50,
         },
     }
 
@@ -42,7 +63,7 @@ async def test_nova_client_initialization():
             aws_secret_access_key="secret",
         )
     assert client.model_name == NovaClient.MODEL_ID
-    assert client.MODEL_ID == "amazon.nova-lite-v1:0"
+    assert client.MODEL_ID == "global.amazon.nova-2-lite-v1:0"
 
 
 @pytest.mark.asyncio
@@ -164,17 +185,18 @@ async def test_converse_called_with_correct_args(nova_client):
 
 @pytest.mark.asyncio
 async def test_process_newspaper(nova_client):
-    """Test process_newspaper returns raw JSON text from Bedrock."""
-    import json
-    payload = json.dumps({
+    """Test process_newspaper returns validated structured payload."""
+    payload = {
         "new_item_title": "Headline",
         "new_item_summary": "Summary",
         "new_item_position": [0, 0],
         "updates": [],
-    })
-    response = make_response(payload)
+    }
+    response = make_tool_response(payload)
     nova_client.client.converse = MagicMock(return_value=response)
 
     result = await nova_client.process_newspaper("some newspaper prompt")
 
-    assert result == payload
+    assert isinstance(result, NewsItemNewspaperAIResponse)
+    assert result.new_item_title == "Headline"
+    assert list(result.new_item_position) == [0, 0]

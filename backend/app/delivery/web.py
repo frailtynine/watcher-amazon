@@ -1,7 +1,6 @@
 import logging
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-from pydantic import ValidationError
 
 from app.db.database import get_async_session
 
@@ -38,11 +37,12 @@ class NewsPaperProcessor:
             aws_access_key_id=settings.BACKEND_AWS_ACCESS_KEY,
             aws_secret_access_key=settings.BACKEND_AWS_SECRET_KEY,
             region_name=settings.BACKEND_AWS_REGION,
+            model_id=settings.BACKEND_AWS_BEDROCK_MODEL_ID,
         )
-        response = await client.process_newspaper(prompt)
+        ai_response = await client.process_newspaper(prompt)
         new_body = self._recreate_newspaper_body(
             newspaper,
-            response,
+            ai_response,
             news_item
         )
         await self._update_newspaper_body(newspaper, new_body)
@@ -135,15 +135,16 @@ class NewsPaperProcessor:
             aws_access_key_id=settings.BACKEND_AWS_ACCESS_KEY,
             aws_secret_access_key=settings.BACKEND_AWS_SECRET_KEY,
             region_name=settings.BACKEND_AWS_REGION,
+            model_id=settings.BACKEND_AWS_BEDROCK_MODEL_ID,
         )
         current_body = NewspaperBody(rows=[])
         for item in items:
             mock = SimpleNamespace(body=current_body.model_dump())
             prompt = self._get_promt(mock.body, item)
-            response = await client.process_newspaper(prompt)
             try:
+                ai_response = await client.process_newspaper(prompt)
                 current_body = self._recreate_newspaper_body(
-                    mock, response, item
+                    mock, ai_response, item
                 )
             except Exception as e:
                 logger.error(
@@ -165,8 +166,12 @@ class NewsPaperProcessor:
             "Your task:\n"
             "1. Write a concise, engaging headline (NYT style, not tabloid) "
             f"for the news item below. Max {_AI_TITLE_MAX} characters.\n"
+            "Headlines should be catchy and informative, but not clickbaity.\n"
+            "More news-oriented, AP-style: what happened, etc.\n"
+            "Always rephase the original title.\n"
             "2. Write a summary of no more than 3 sentences. "
             f"Max {_AI_SUMMARY_MAX} characters.\n"
+            "ALWAYS check the summary for factual accuracy. For example, check who is the current country leader to avoid hallucinating wrong names. \n"
             "3. Rearrange the news items in the newspaper body"
             "according to their importance, finding the best place for the new "
             "item. Keep no more than 10 rows."
@@ -184,17 +189,18 @@ class NewsPaperProcessor:
             "If the new news item is almost the same as an existing one, "
             "keep the one that is more recent and relevant, and drop the other.\n\n"
             "Output instructions:\n"
-            "Return a raw JSON object with exactly these fields "
-            "(no markdown, no code fences):\n"
-            "- `new_item_title`: headline for the new item (string)\n"
-            "- `new_item_summary`: 1-3 sentence summary (string)\n"
-            "- `new_item_position`: [row, col] where to place the new item (array of 2 ints)\n"
-            "- `updates`: array of objects, each with exactly TWO fields:\n"
+            "Use the provided tool output schema (structured output).\n"
+            "ALWAYS provide ALL required fields in one tool call:\n"
+            "- `new_item_title`: headline for the new item (string, required)\n"
+            "- `new_item_summary`: 1-3 sentence summary (string, required)\n"
+            "- `new_item_position`: [row, col] for the new item "
+            "(array of 2 ints, required, never omit)\n"
+            "- `updates`: array of objects (required; use [] if nothing to keep):\n"
             "    - `row_index` (int): 0-based index of the item in the `rows` array of the current layout\n"
             "    - `position` (array of 2 ints): new [row, col] position for that item\n"
             "  Include only items you want to KEEP. Omit items you want to drop.\n"
             "  Do NOT include title, summary, news_item_id, or any other fields in updates.\n\n"
-            "Example output format:\n"
+            "Example structured payload:\n"
             '{"new_item_title":"...", "new_item_summary":"...", "new_item_position":[0,0], '
             '"updates":[{"row_index":0,"position":[1,0]},{"row_index":2,"position":[2,0]}]}\n\n'
             f"Current layout (rows is a 0-based array): {newspaper_schema}\n\n"
@@ -206,19 +212,9 @@ class NewsPaperProcessor:
     def _recreate_newspaper_body(
         self,
         newspaper: Newspaper,
-        response: str,
+        ai_response: NewsItemNewspaperAIResponse,
         news_item: NewsItem,
     ) -> NewspaperBody:
-        logger.debug("Raw AI response: %s", response)
-        try:
-            ai_response = NewsItemNewspaperAIResponse.model_validate_json(
-                response
-            )
-        except ValidationError as e:
-            logger.error(
-                f"Failed to parse AI response: {e}\nRaw response: {response}"
-            )
-            raise
         current_body = NewspaperBody(**newspaper.body)
         current_body_items = current_body.rows
         new_item = NewsItemNewspaper(

@@ -296,6 +296,7 @@ class AIConsumer:
             aws_access_key_id=settings.BACKEND_AWS_ACCESS_KEY,
             aws_secret_access_key=settings.BACKEND_AWS_SECRET_KEY,
             region_name=settings.BACKEND_AWS_REGION,
+            model_id=settings.BACKEND_AWS_BEDROCK_MODEL_ID,
         )
 
 

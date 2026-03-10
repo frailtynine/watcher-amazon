@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     BACKEND_AWS_ACCESS_KEY: str
     BACKEND_AWS_SECRET_KEY: str
     BACKEND_AWS_REGION: str
+    BACKEND_AWS_BEDROCK_MODEL_ID: str = "global.amazon.nova-2-lite-v1:0"
 
 
 settings = Settings()

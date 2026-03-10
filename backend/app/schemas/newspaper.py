@@ -1,14 +1,18 @@
 from datetime import datetime
 from typing import Any, Dict
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class NewsItemPositionUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     row_index: int
     position: tuple[int, int]
 
 
 class NewsItemNewspaperAIResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     new_item_title: str
     new_item_summary: str
     new_item_position: tuple[int, int]
